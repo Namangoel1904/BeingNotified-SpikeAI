@@ -11,16 +11,16 @@ def map_query_to_seo_rule(query: str) -> str | None:
     if "title" in q and ("60" in q or "long" in q):
         return "long_title"
 
-    # Non-HTTPS URLs
-    if "https" in q:
-        return "non_https"
+    # Missing meta descriptions
+    if "meta" in q and ("missing" in q or "empty" in q):
+        return "missing_meta"
 
-    # Noindex pages
-    if "noindex" in q or ("index" in q and "no" in q):
-        return "noindex"
+    # Non-indexable pages
+    if "non indexable" in q or "non-indexable" in q:
+        return "non_indexable"
 
-    # Redirect issues
-    if "redirect" in q:
-        return "redirects"
+    # Noindex pages (explicit)
+    if "noindex" in q:
+        return "non_indexable"
 
     return None
