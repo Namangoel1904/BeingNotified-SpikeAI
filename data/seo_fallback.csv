@@ -1,0 +1,5 @@
+address,title 1 length,meta description 1,indexability
+https://example.com/page-1,72,Example meta description,Indexable
+https://example.com/page-2,65,,Indexable
+https://example.com/page-3,90,Another description,Indexable
+https://example.com/page-4,45,Short title,Indexable
