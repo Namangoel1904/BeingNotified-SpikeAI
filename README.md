@@ -1,4 +1,5 @@
 # Spike AI BuildX – Multi-Agent Backend
+## Team BeingNotified 
 
 This project implements a production-ready multi-agent backend aligned with Spike AI’s
 Marketing AGI philosophy.
@@ -15,8 +16,8 @@ It supports:
 ```bash
 git clone <repo-url>
 cd <repo>
-
-2. (Optional) Add GA4 Credentials
+```
+### 2. (Optional) Add GA4 Credentials
 
 For GA4 analytics evaluation, place a valid credentials.json
 in the project root.
