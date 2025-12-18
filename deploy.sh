@@ -22,6 +22,12 @@ if [ ! -d ".venv" ]; then
   python3 -m venv .venv
 fi
 
+# Activate venv (guaranteed to exist now)
+if [ ! -f ".venv/bin/activate" ]; then
+  echo "❌ Virtual environment activation script not found"
+  exit 1
+fi
+
 source .venv/bin/activate
 
 # -----------------------------
