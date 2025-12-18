@@ -1,4 +1,5 @@
 # Spike AI BuildX – Multi-Agent Backend
+## Team BeingNotified 
 
 This project implements a production-ready multi-agent backend aligned with Spike AI’s
 Marketing AGI philosophy.
