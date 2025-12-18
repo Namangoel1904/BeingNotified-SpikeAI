@@ -1,37 +1,32 @@
 import os
-import time
-from openai import OpenAI, APIError
-
-LITELLM_BASE_URL = "http://3.110.18.218"
-LITELLM_MODEL_FAST = "gemini-2.5-flash"
+from typing import List, Dict
 
 class LiteLLMClient:
-    def __init__(self):
-        api_key = os.getenv("LITELLM_API_KEY")
-        if not api_key:
-            raise RuntimeError("LITELLM_API_KEY not set")
+    """
+    Safe LiteLLM client.
+    - NEVER crashes at import time
+    - Becomes a no-op if API key is missing
+    """
 
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=LITELLM_BASE_URL
+    def __init__(self):
+        self.api_key = os.getenv("LITELLM_API_KEY")
+        self.enabled = bool(self.api_key)
+
+    def chat(self, messages: List[Dict[str, str]]) -> str:
+        if not self.enabled:
+            raise RuntimeError("LLM not available")
+
+        # Import here to avoid hard dependency at startup
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=self.api_key,
+            base_url=os.getenv("OPENAI_BASE_URL"),
         )
 
-    def chat(self, messages, model=LITELLM_MODEL_FAST, max_retries=5):
-        base_delay = 1
+        response = client.chat.completions.create(
+            model="gemini-2.5-flash",
+            messages=messages,
+        )
 
-        for attempt in range(max_retries):
-            try:
-                response = self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                )
-                return response.choices[0].message.content
-
-            except APIError as e:
-                if e.status_code == 429:
-                    wait_time = base_delay * (2 ** attempt)
-                    time.sleep(wait_time)
-                else:
-                    raise e
-
-        raise RuntimeError("LiteLLM failed after retries")
+        return response.choices[0].message.content

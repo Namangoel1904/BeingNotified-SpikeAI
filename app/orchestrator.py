@@ -1,24 +1,19 @@
 import json
-from app.llm.client import LiteLLMClient
-from app.llm.prompts import INTENT_DETECTION_PROMPT
 from app.schemas.intent import IntentPlan
+from app.llm.client import LiteLLMClient
 
-# GA4 imports
 from app.agents.ga4_agent import GA4Agent
 from app.utils.ga4_planner import plan_ga4_query, extract_page_path
-from app.utils.ga4_postprocess import is_time_series, summarize_ga4_result
+from app.utils.ga4_postprocess import summarize_ga4_result, is_time_series
 
-# SEO imports
 from app.agents.seo_agent import SEOAgent
 from app.utils.seo_planner import map_query_to_seo_rule
 
 # -------------------------
-# Global singletons
+# Agents (SAFE)
 # -------------------------
-llm = LiteLLMClient()
 ga4_agent = GA4Agent()
 
-# Default SEO data source (from problem statement PDF)
 SEO_DATA_SOURCE = (
     "https://docs.google.com/spreadsheets/d/"
     "1zzf4ax_H2WiTBVrJigGjF2Q3Yz-qy2qMCbAMKvl6VEE/edit#gid=1438203274"
@@ -29,23 +24,9 @@ seo_agent = SEOAgent(data_source=SEO_DATA_SOURCE)
 # Intent Detection
 # -------------------------
 def detect_intent(query: str) -> IntentPlan:
-    """
-    Detect whether the query is analytics or seo.
-    Deterministic SEO override BEFORE LLM.
-    """
-
     seo_keywords = [
-        "title",
-        "meta",
-        "h1",
-        "seo",
-        "index",
-        "noindex",
-        "canonical",
-        "redirect",
-        "https",
-        "status",
-        "crawl",
+        "title", "meta", "index", "seo", "canonical",
+        "redirect", "crawl", "https"
     ]
 
     lowered = query.lower()
@@ -56,15 +37,13 @@ def detect_intent(query: str) -> IntentPlan:
             tasks=[{"agent": "seo", "goal": query}],
         )
 
-    messages = [
-        {"role": "system", "content": INTENT_DETECTION_PROMPT},
-        {"role": "user", "content": query},
-    ]
-
     try:
-        raw = llm.chat(messages)
-        parsed = json.loads(raw)
-        return IntentPlan(**parsed)
+        llm = LiteLLMClient()
+        raw = llm.chat([
+            {"role": "system", "content": "Detect intent: analytics or seo."},
+            {"role": "user", "content": query},
+        ])
+        return IntentPlan(**json.loads(raw))
 
     except Exception:
         return IntentPlan(
@@ -77,18 +56,12 @@ def detect_intent(query: str) -> IntentPlan:
 # Main Orchestrator
 # -------------------------
 def orchestrate(query: str, property_id: str | None):
-    """
-    Main orchestration function.
-    Routes requests to GA4 (Tier-1) or SEO (Tier-2).
-    """
-
     intent_plan = detect_intent(query)
 
-    # ==================================================
-    # 🔹 ANALYTICS (GA4 — Tier-1)
-    # ==================================================
+    # -------------------------
+    # GA4 (Tier 1)
+    # -------------------------
     if intent_plan.intent == "analytics":
-
         if not property_id:
             return {
                 "answer": "GA4 propertyId is required for analytics queries.",
@@ -109,16 +82,10 @@ def orchestrate(query: str, property_id: str | None):
             )
 
         except FileNotFoundError as e:
-            return {
-                "answer": str(e),
-                "data": None,
-            }
+            return {"answer": str(e), "data": None}
 
         except Exception as e:
-            return {
-                "answer": "Failed to fetch GA4 data.",
-                "data": {"error": str(e)},
-            }
+            return {"answer": "Failed to fetch GA4 data.", "data": {"error": str(e)}}
 
         summary = summarize_ga4_result(query, result)
 
@@ -132,9 +99,9 @@ def orchestrate(query: str, property_id: str | None):
             },
         }
 
-    # ==================================================
-    # 🔹 SEO (Tier-2)
-    # ==================================================
+    # -------------------------
+    # SEO (Tier 2)
+    # -------------------------
     if intent_plan.intent == "seo":
         rule_key = map_query_to_seo_rule(query)
 
@@ -146,9 +113,9 @@ def orchestrate(query: str, property_id: str | None):
 
         return seo_agent.run(rule_key)
 
-    # ==================================================
-    # 🔹 FALLBACK
-    # ==================================================
+    # -------------------------
+    # Fallback
+    # -------------------------
     return {
         "answer": f"Intent detected: {intent_plan.intent}",
         "data": intent_plan.dict(),
