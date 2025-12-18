@@ -10,7 +10,7 @@ class SEOAgent:
     SEO Agent for Tier-2 evaluation.
 
     - Supports Google Sheets or CSV as data source
-    - Does NOT assume data availability
+    - Handles inconsistent Screaming Frog column names
     - Fails gracefully without hallucination
     """
 
@@ -45,34 +45,51 @@ class SEOAgent:
         rule = SEO_RULES[rule_key]
 
         try:
-            column = rule["column"]
+            target_column = rule["column"]
             operator = rule["operator"]
             threshold = rule.get("threshold")
 
             df = self.df
 
-            # Normalize column presence
-            if column not in df.columns:
+            # --------------------------------------------------
+            # 🧠 Fuzzy / resilient column matching
+            # --------------------------------------------------
+            normalized_columns = {
+                col.lower().strip(): col for col in df.columns
+            }
+
+            normalized_target = target_column.lower().strip()
+
+            matched_column = None
+            for norm_col, original_col in normalized_columns.items():
+                if normalized_target in norm_col:
+                    matched_column = original_col
+                    break
+
+            if not matched_column:
                 return {
-                    "answer": f"Required SEO column '{column}' not found in data.",
+                    "answer": f"Required SEO column '{target_column}' not found in data.",
                     "data": None,
                 }
 
+            # --------------------------------------------------
             # Apply rule
+            # --------------------------------------------------
             if operator == ">":
-                result = df[df[column] > threshold]
+                result = df[df[matched_column] > threshold]
 
             elif operator == "!=":
-                result = df[df[column] != threshold]
+                result = df[df[matched_column] != threshold]
 
             elif operator == "isnull":
-                result = df[df[column].isna()]
+                result = df[df[matched_column].isna()]
 
             else:
                 result = df
 
+            # Prefer URL/address column if present
             urls = (
-                result.get("address")
+                result["address"]
                 if "address" in result.columns
                 else result.iloc[:, 0]
             )
