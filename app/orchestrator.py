@@ -1,5 +1,4 @@
 import json
-
 from app.llm.client import LiteLLMClient
 from app.llm.prompts import INTENT_DETECTION_PROMPT
 from app.schemas.intent import IntentPlan
@@ -7,14 +6,11 @@ from app.schemas.intent import IntentPlan
 # GA4 imports
 from app.agents.ga4_agent import GA4Agent
 from app.utils.ga4_planner import plan_ga4_query, extract_page_path
-from app.utils.ga4_postprocess import (
-    is_time_series,
-    summarize_ga4_result,
-)
+from app.utils.ga4_postprocess import is_time_series, summarize_ga4_result
 
 # SEO imports
 from app.agents.seo_agent import SEOAgent
-from app.utils.seo_intent_mapper import map_seo_query_to_rule
+from app.utils.seo_planner import map_query_to_seo_rule
 
 # -------------------------
 # Global singletons
@@ -29,24 +25,27 @@ SEO_DATA_SOURCE = (
 )
 seo_agent = SEOAgent(data_source=SEO_DATA_SOURCE)
 
-
 # -------------------------
 # Intent Detection
 # -------------------------
 def detect_intent(query: str) -> IntentPlan:
     """
-    Detect whether the query is analytics, seo, or multi-agent.
-    Applies deterministic SEO override before LLM usage.
+    Detect whether the query is analytics or seo.
+    Deterministic SEO override BEFORE LLM.
     """
 
-    # Deterministic SEO override (domain guarantees)
     seo_keywords = [
-        "title tag", "title tags",
-        "meta description",
-        "indexability", "indexable",
-        "https", "canonical",
-        "robots", "sitemap",
-        "hreflang", "alt text", "images",
+        "title",
+        "meta",
+        "h1",
+        "seo",
+        "index",
+        "noindex",
+        "canonical",
+        "redirect",
+        "https",
+        "status",
+        "crawl",
     ]
 
     lowered = query.lower()
@@ -68,13 +67,11 @@ def detect_intent(query: str) -> IntentPlan:
         return IntentPlan(**parsed)
 
     except Exception:
-        # Safe fallback
         return IntentPlan(
             intent="analytics",
             requires_property_id=True,
             tasks=[{"agent": "analytics", "goal": query}],
         )
-
 
 # -------------------------
 # Main Orchestrator
@@ -139,11 +136,11 @@ def orchestrate(query: str, property_id: str | None):
     # 🔹 SEO (Tier-2)
     # ==================================================
     if intent_plan.intent == "seo":
-        rule_key = map_seo_query_to_rule(query)
+        rule_key = map_query_to_seo_rule(query)
 
         if not rule_key:
             return {
-                "answer": "SEO analysis request not supported.",
+                "answer": "Unsupported SEO analysis request.",
                 "data": None,
             }
 
