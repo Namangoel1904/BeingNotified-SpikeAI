@@ -109,7 +109,16 @@ central orchestrator coordinating specialized agents.
    - Structured execution metadata (for evaluation/debugging)
 
 ---
+### Detailed Architecture (Reference)
 
+The following diagram illustrates internal agent boundaries,
+execution flow, and design principles used in the system.
+
+![High-Level Architecture](docs/architecture_simple.png)
+
+## 🔍 Detailed Architecture (Reference)
+
+![Detailed Architecture](docs/architecture_detailed.png)
 ### Core Components
 
 #### 1️⃣ API Layer (FastAPI)
