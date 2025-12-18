@@ -1,50 +1,49 @@
-
----
-
-# ✅ `ASSUMPTIONS.md` (FINAL – VERY IMPORTANT)
-
-```md
 # Assumptions & Design Decisions
 
-This document explains the key assumptions and technical decisions
-made while building the system.
+This document outlines the assumptions and technical decisions made
+while building the system.
 
-The system is designed to be evaluated **entirely through automation**.
+The system is designed to be evaluated **entirely through automation**
+in a headless Linux environment.
 
 ---
 
 ## General Assumptions
+
 - The evaluator will deploy the system in a Linux environment.
 - The evaluator will interact with the system only through the `/query` API.
-- The system must prioritize **graceful failure** over crashes or hallucinations.
+- The system prioritizes **graceful failure** over crashes or hallucinated output.
+- Absence of data is treated as a valid runtime state.
 
 ---
 
 ## GA4 Analytics Agent
 
 - GA4 credentials are expected to be provided at runtime via `credentials.json`.
-- The system must start successfully even if GA4 credentials are missing.
+- The system starts successfully even if GA4 credentials are missing.
 - If credentials are not present:
   - Analytics queries return a clear explanatory message.
-  - The service does not crash.
-- GA4 metrics and dimensions are validated against allowlists to prevent invalid queries.
+  - The service does not crash or fabricate metrics.
+- GA4 queries are planned deterministically using validated metrics and dimensions.
 - Default date range is **last 7 days** if none is specified.
-- Page-level queries are handled using `pagePath` filters.
-- Time-series vs aggregate behavior is inferred deterministically.
+- Page-level queries use `pagePath` filtering.
+- Time-series vs aggregate responses are inferred deterministically.
 
 ---
 
 ## SEO Agent & Data Handling
 
-- SEO analysis is based on Screaming Frog crawl data provided via Google Sheets.
-- The system accepts the **exact Google Sheets URL** shared in the problem statement.
-- Google Sheets URLs are automatically converted internally to CSV export URLs.
-- The system does not assume:
-  - Local files
-  - Manual data preprocessing
-- If SEO data is inaccessible or incomplete:
-  - The system responds gracefully.
-  - No SEO data is hallucinated.
+- SEO analysis is based on Screaming Frog–style crawl data.
+- The system **attempts** to ingest SEO data from the Google Sheets URL
+  provided in the problem statement.
+- Google Sheets URLs are internally converted to export formats suitable
+  for programmatic access.
+- Due to known restrictions on unauthenticated Google Sheets exports:
+  - Live data ingestion may fail in automated environments.
+- When live ingestion fails:
+  - The system falls back to a local snapshot (`seo_fallback.csv`).
+  - No SEO insights are hallucinated.
+  - The system continues to operate deterministically.
 
 ---
 
@@ -55,13 +54,13 @@ The system is designed to be evaluated **entirely through automation**.
   - GA4 query planning
   - High-level summarization
 - LLMs are **never** used for direct data execution.
-- All LLM outputs are validated or constrained by deterministic logic.
+- All LLM outputs are constrained by deterministic logic.
 
 ---
 
 ## Scope & Intent
 
-- The system is intentionally scoped to demonstrate:
+- The system demonstrates:
   - Multi-agent orchestration
   - Safe LLM integration
   - Production-grade backend design
@@ -72,5 +71,3 @@ The system is designed to be evaluated **entirely through automation**.
 ## Guiding Principle
 
 > “LLMs reason. Code enforces. Systems fail gracefully.”
-
-This principle guided all architectural decisions.
