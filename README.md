@@ -196,6 +196,15 @@ All final execution is:
 - No hallucinated analytics or SEO data is returned
 
 ---
+### GA4 Credentials
+
+A valid `credentials.json` file must be present at the project root for GA4 access.
+
+For security reasons, this file is committed.
+A template is provided as `credentials.json` and contains dummy strings.
+
+During automated evaluation, `credentials.json` will be injected by evaluators.
+
 
 ## 📄 Documentation
 
